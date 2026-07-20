@@ -1,6 +1,11 @@
 ---
 name: install-morvero
 description: Install Morvero product intelligence (usage analytics + in-product feedback + AI-agent pilot telemetry) into a web app, native mobile app, or AI-agent backend, and verify data is actually arriving. Use when asked to add Morvero, add product analytics or feedback tracking to an enterprise/internal app, or instrument an AI agent pilot.
+version: 1.0.0
+license: MIT
+homepage: https://morvero.com
+metadata:
+  compatibility: claude-code, codex, cursor, copilot, cline
 ---
 
 # Install Morvero

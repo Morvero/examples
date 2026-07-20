@@ -1,0 +1,81 @@
+name: validate-examples
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: No real product keys committed
+        # Placeholders (fbk_your_product_key, fbk_...) contain underscores or
+        # dots; real keys are a long unbroken alphanumeric run after fbk_.
+        run: |
+          if grep -RInE 'fbk_[a-z0-9]{12,}' --exclude-dir=.git .; then
+            echo '::error::Looks like a real product key is committed'; exit 1
+          fi
+          echo 'ok: placeholders only'
+
+      - name: Every web example loads the canonical widget URL
+        run: |
+          for f in web-widget/vanilla-html/index.html \
+                   web-widget/react/MorveroWidget.tsx \
+                   web-widget/nextjs/app/layout.tsx \
+                   web-widget/nextjs/pages/_app.tsx \
+                   web-widget/vue/morvero.js; do
+            grep -q 'https://morvero.com/widget.js' "$f" || { echo "::error file=$f::missing canonical widget URL"; exit 1; }
+          done
+          echo 'ok: all examples use https://morvero.com/widget.js'
+
+      - name: JavaScript examples parse
+        # the vue example is ESM with a .js extension (normal in Vite apps),
+        # so its syntax check goes through stdin with an explicit input type
+        run: |
+          node --check agent-telemetry/morvero-agent.mjs
+          node --input-type=module --check < web-widget/vue/morvero.js
+
+      - name: TypeScript examples compile
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund typescript@5 @types/react@18 @types/node@22 next@15 react@18 react-dom@18 >/dev/null 2>&1
+          npx tsc --noEmit --strict --jsx react-jsx --esModuleInterop --skipLibCheck --module esnext --moduleResolution bundler --target es2022 \
+            web-widget/react/MorveroWidget.tsx web-widget/nextjs/app/layout.tsx web-widget/nextjs/pages/_app.tsx
+
+      - name: SKILL.md has valid frontmatter and current MCP tool names
+        run: |
+          node -e "
+            const fs = require('fs');
+            const md = fs.readFileSync('skills/install-morvero/SKILL.md', 'utf8');
+            const m = md.match(/^---\n([\s\S]*?)\n---/);
+            if (!m) { console.error('no YAML frontmatter'); process.exit(1); }
+            for (const key of ['name:', 'description:']) {
+              if (!m[1].includes(key)) { console.error('frontmatter missing ' + key); process.exit(1); }
+            }
+            for (const tool of ['verify_install', 'get_install_snippet', 'list_products', 'create_product']) {
+              if (!md.includes(tool)) { console.error('SKILL.md missing MCP tool: ' + tool); process.exit(1); }
+            }
+            console.log('ok: frontmatter + MCP tool names present');
+          "
+
+      - name: Relative links in Markdown resolve
+        run: |
+          node -e "
+            const fs = require('fs'), path = require('path');
+            const mds = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'GEMINI.md',
+              'web-widget/README.md', 'web-widget/react/README.md', 'web-widget/nextjs/README.md', 'web-widget/vue/README.md'];
+            let bad = 0;
+            for (const md of mds) {
+              const dir = path.dirname(md);
+              for (const [, target] of fs.readFileSync(md, 'utf8').matchAll(/\]\(([^)#]+)\)/g)) {
+                if (/^https?:|^mailto:/.test(target)) continue;
+                if (!fs.existsSync(path.join(dir, target))) { console.error(md + ' -> broken link: ' + target); bad++; }
+              }
+            }
+            process.exit(bad ? 1 : 0);
+          "

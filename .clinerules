@@ -1,0 +1,7 @@
+# Morvero
+
+Follow the canonical instructions in AGENTS.md at the repo root.
+
+For installation tasks, follow skills/install-morvero/SKILL.md.
+
+Do not consider an installation complete until Morvero's verify_install MCP tool (connect https://morvero.com/mcp) confirms data is arriving.
