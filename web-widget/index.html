@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Morvero web-widget example</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #fafafa; color: #1f2937; }
+    main { max-width: 720px; margin: 48px auto; padding: 0 24px; }
+    h1 { letter-spacing: -1px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 16px 0; }
+    button { font: inherit; padding: 9px 18px; border-radius: 8px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; }
+    button:hover { border-color: #0E5E56; color: #0E5E56; }
+    code { background: #f1f5f9; border-radius: 5px; padding: 1px 6px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Morvero web-widget example</h1>
+    <p>One script tag in the footer is the whole integration. Replace <code>fbk_your_product_key</code>
+       with your product's key (console → Products → Copy snippet) and open this page: the floating
+       feedback button appears bottom-right, and the pageview is already counted.</p>
+
+    <div class="card">
+      <h3>Feature tagging — zero JS</h3>
+      <p>Any clickable element with <code>data-feedback-action</code> shows up under
+         "Most used functions" in the dashboard:</p>
+      <button data-feedback-action="export-csv">Export CSV</button>
+      <button data-feedback-action="download-report">Download report</button>
+    </div>
+
+    <div class="card">
+      <h3>Tracking from code</h3>
+      <p>Calls made at page-load time need the queue stub below, because the widget loads
+         <code>async</code>. Calls from click handlers later don't.</p>
+      <button id="from-code">Track "manual-refresh" from JS</button>
+    </div>
+  </main>
+
+  <!-- 1. Queue stub: lets you call the API before the widget has loaded.
+       Must be its own <script> tag — a tag with src ignores inline content. -->
+  <script>
+    window.MorveroFeedback = window.MorveroFeedback || {
+      q: [],
+      track: function (n) { this.q.push(['track', n]); },
+      open: function () { this.q.push(['open']); }
+    };
+    MorveroFeedback.track('example-page-loaded'); // queued, replayed when the widget loads
+
+    document.getElementById('from-code').addEventListener('click', function () {
+      MorveroFeedback.track('manual-refresh');
+    });
+  </script>
+
+  <!-- 2. The install: one line. SPA route changes are tracked automatically;
+       add data-feedback-hash-routing for hash-routed apps. -->
+  <script async src="https://morvero.com/widget.js" data-feedback-key="fbk_your_product_key"></script>
+</body>
+</html>
